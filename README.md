@@ -8,6 +8,4 @@ Advance Language Python Project
 | **Section** | 1 |
 | **Semester** | Fall 2023 |
 | **Students** | Anthony, |
-| **Mav Username**            | arhunter, |
-| **GitHub Username**         | Arhunter129 |
 | **Repository**          | https://github.com/Arhunter129/AdvPy-FinalProject-QuizGame |
