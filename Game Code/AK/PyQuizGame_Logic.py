@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 """
 uri = "mongodb+srv://cluster0.dgvxubp.mongodb.net/?authSource=%24external&authMechanism=MONGODB-X509&retryWrites=true&w=majority"
 client = MongoClient(uri,
@@ -10,6 +11,15 @@ doc_count = collection.count_documents({})
 print(doc_count)
 
 """
+class question:
+    question: str = ""
+    options: str = {"","","",""}
+    answer:str = ""
+    def __init__(self,q:str,opt:str,ans:str ):
+        self.question = q
+        self.options = opt
+        self.answer = ans
+
 
 def check_answer(user:str,answer:str) -> bool:
     if(answer == user):
