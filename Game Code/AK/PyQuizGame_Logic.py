@@ -32,10 +32,12 @@ def display_score(correct:int,total:int)->None:
     print("Your score is: ", percent, "%\n")
     print("You got ", correct, " answers right out of ", total," questions")
 
+def load_questions(Q_array:question,numOfQ:int):#will need a variable for what comes from the database
+    for i in numOfQ:
+        quest,option,answer = "" #these will be aquired from the database
+        Q_array[i] = question(quest,option,answer)
 
-    
-
-questions = {}#array will be loaded with questions
+questions:question = {}#array will be loaded with questions
 user = ""
 result = False
 correct_answers = 0
