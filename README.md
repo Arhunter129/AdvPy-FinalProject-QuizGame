@@ -2,7 +2,7 @@
 Advance Language Python Project
 ## AdvPy Repo
 
-| Names | Anthony Hunter, |
+| Names | Anthony Hunter, Brandon Kamplain, Aidan Kavanagh |
 |:---|:---|
 | **Course** | CSCI310 - AdvLang Python |
 | **Section** | 1 |
