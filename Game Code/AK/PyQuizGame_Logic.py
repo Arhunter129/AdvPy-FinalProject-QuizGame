@@ -1,16 +1,4 @@
-from dataclasses import dataclass
-"""
-uri = "mongodb+srv://cluster0.dgvxubp.mongodb.net/?authSource=%24external&authMechanism=MONGODB-X509&retryWrites=true&w=majority"
-client = MongoClient(uri,
-                     tls=True,
-                     tlsCertificateKeyFile='<path_to_certificate>',
-                     server_api=ServerApi('1'))
-db = client['testDB']
-collection = db['testCol']
-doc_count = collection.count_documents({})
-print(doc_count)
 
-"""
 class question:
     question: str = ""
     options: str = {"","","",""}
@@ -32,26 +20,43 @@ def display_score(correct:int,total:int)->None:
     print("Your score is: ", percent, "%\n")
     print("You got ", correct, " answers right out of ", total," questions")
 
-def load_questions(Q_array:question,numOfQ:int):#will need a variable for what comes from the database
-    for i in numOfQ:
-        quest,option,answer = "" #these will be aquired from the database
-        Q_array[i] = question(quest,option,answer)
+def load_quiz(data,quiz:question):
+    for line in data:
+        if(line == "\n"):
+            ask = data.readline()
+        else:
+            ask = line
+        opt = []
+        load_options(opt,data)
+        ans = data.readline()
+        quiz.append(question(ask,opt,ans))
 
-questions:question = {}#array will be loaded with questions
+def load_options(options, data):
+    for i in range(0,4):
+        options.append(data.readline())
+
+def print_question(question:question):
+    print(question.question)
+    for i in question.options:
+        print(str(question.options.index(i))+")",i)
+
+quiz:question = []#array will be loaded with questions
 user = ""
 result = False
 correct_answers = 0
-total_answers = len(questions)
+total_answers = len(quiz)
 #game loop
-for i in questions:
-    print(i.question)
-    for j in i.options:
-        print(j)
-    user = int(input("Please enter your answer:"))
-    result = check_answer(i.options[user], i.answer)
-    if(result == True):
-        print("\nCorrect!\n")
-        correct_answers += 1
-    else:
-        print("\nIncorrect\n")
+if(__name__ == "__main__"):
+    file = open("C:\AdvPython\AdvPy-FinalProject-QuizGame\Game Code\AK\input.txt")
+    load_quiz(file,quiz)
+    for i in quiz:
+        print_question(i)
+        user = int(input("Please enter your answer:"))
+        result = check_answer(i.options[user], i.answer)
+        if(result == True):
+            print("\nCorrect!\n")
+            correct_answers += 1
+        else:
+            print("\nIncorrect\n")
+            print("The Correct answer is:",i.answer)
 
