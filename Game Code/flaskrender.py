@@ -8,8 +8,11 @@ app = Flask(__name__)
 
 # Pygame initialization
 pygame.init()
-WIDTH, HEIGHT = 800, 600
+WIDTH, HEIGHT = 1280, 720
 screen = pygame.Surface((WIDTH, HEIGHT))
+
+# Declare buttons as a global variable
+buttons = []
 
 class Button:
     def __init__(self, text, rect, color):
@@ -25,26 +28,25 @@ class Button:
         surface.blit(text, text_rect)
 
 def generate():
-    x, y = 10, HEIGHT // 2  # Starting position
+    x, y = 10, 10  # Starting position
     font = pygame.font.Font(None, 36)
 
-    # Example text with word wrapping
+    # Example question with answers
     question = "This is an example question, which has the correct answer of C."
-    texts = [
-        question,
-        "A: Is Not Correct!",
-        "B: Also Not Correct!",
-        "C: Is Correct!",
-        "D: Go back to C, it's Correct!"
+    answers = [
+        ("A: Is Not Correct!", 'A'),
+        ("B: Also Not Correct!", 'B'),
+        ("C: Is Correct!", 'C'),
+        ("D: Go back to C, it's Correct!", 'D')
     ]
 
-    # Create buttons with different colors
-    button_a = Button("A", pygame.Rect(50, 500, 100, 50), (255, 0, 0))  # Red
-    button_b = Button("B", pygame.Rect(200, 500, 100, 50), (0, 255, 0))  # Green
-    button_c = Button("C", pygame.Rect(350, 500, 100, 50), (0, 0, 255))  # Blue
-    button_d = Button("D", pygame.Rect(500, 500, 100, 50), (255, 255, 0))  # Yellow
+    global buttons  # Declare buttons as a global variable
 
-    buttons = [button_a, button_b, button_c, button_d]
+    # Create buttons with different colors and stack them vertically
+    buttons = [
+        Button(answer_text, pygame.Rect(50, 400 + i * 60, 400, 50), (255, 0, 0))  # Red
+        for i, (answer_text, _) in enumerate(answers)
+    ]
 
     correct_answer = 'C'
     user_answer = None
@@ -61,16 +63,15 @@ def generate():
                 if event.button == 1:  # Left mouse button
                     for button in buttons:
                         if button.rect.collidepoint(event.pos):
-                            user_answer = button.text
-                            print(f'Button {button.text} clicked!')
+                            user_answer = button.answer
+                            print(f'Button {button.answer} clicked!')
 
         # Update Pygame window (e.g., drawing)
-        screen.fill((255, 255, 255))  # White background
+        screen.fill((90, 90, 90))  # White background
 
-        for i, text in enumerate(texts):
-            rendered_text = font.render(text, True, (0, 0, 0))
-            if y + rendered_text.get_height() * (i + 1) <= HEIGHT:
-                screen.blit(rendered_text, (x, y + rendered_text.get_height() * i))
+        # Display question
+        question_rendered = font.render(question, True, (0, 0, 0))
+        screen.blit(question_rendered, (x, y))
 
         # Draw buttons
         for button in buttons:
@@ -98,7 +99,6 @@ def generate():
         # Yield the byte stream
         yield (b'--frame\r\n'
                b'Content-Type: image/png\r\n\r\n' + img_byte_array.getvalue() + b'\r\n')
-               
 
 @app.route('/')
 def index():
@@ -116,19 +116,20 @@ def handle_click():
     y = float(data.get('y'))
     print(f'Received click at coordinates ({x}, {y})')
 
-    # Add your logic to handle the click here
+    # Check if the coordinates are within any button rectangle
+    for button in buttons:
+        if button.rect.collidepoint(x, y):
+            button_clicked = button.text
+            print(f'Button "{button_clicked}" clicked!')
+            # Add your logic to handle the button click here
 
     return jsonify({'status': 'success'})
-
-# ...
 
 def run_flask():
     from werkzeug.serving import run_simple
     run_simple('localhost', 5000, app, use_reloader=False)
 
-# ...
-
 if __name__ == "__main__":
     app.run(debug=True)
-    #flask_thread = threading.Thread(target=run_flask)
-    #flask_thread.start()
+    flask_thread = threading.Thread(target=run_flask)
+    flask_thread.start()
