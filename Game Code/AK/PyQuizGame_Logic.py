@@ -44,11 +44,12 @@ quiz:question = []#array will be loaded with questions
 user = ""
 result = False
 correct_answers = 0
-total_answers = len(quiz)
+total_answers = 0
 #game loop
 if(__name__ == "__main__"):
-    file = open("C:\AdvPython\AdvPy-FinalProject-QuizGame\Game Code\AK\input.txt")
+    file = open("input.txt")
     load_quiz(file,quiz)
+    total_answers = len(quiz)
     for i in quiz:
         print_question(i)
         user = int(input("Please enter your answer:"))
@@ -59,4 +60,6 @@ if(__name__ == "__main__"):
         else:
             print("\nIncorrect\n")
             print("The Correct answer is:",i.answer)
+    display_score(correct_answers,total_answers)
+    
 
