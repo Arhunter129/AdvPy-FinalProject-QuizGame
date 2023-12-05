@@ -3,8 +3,8 @@ import pygame
 from PIL import Image
 import io
 import threading
-from AK.PyQuizGame_Logic import question, check_answer, display_score, load_quiz, load_options, print_question
-
+from AK.PyQuizGame_Logic import question, check_answer, display_score, load_quiz, load_options, print_question, split_text
+import time
 
 app = Flask(__name__)
 
@@ -24,12 +24,15 @@ class Button:
         self.color = color
         self.answer = answer
         self.correct = correct
+        self.clicked = False
 
     def draw(self, surface):
-        if self.correct:
-            pygame.draw.rect(surface, (0, 255, 0), self.rect)  # Green for correct
+        if self.clicked:
+            pygame.draw.rect(surface, (255, 0, 0), self.rect)  # Red for clicked (incorrect) buttons
+        elif self.correct:
+            pygame.draw.rect(surface, (0, 255, 0), self.rect)  # Green for correct buttons
         else:
-            pygame.draw.rect(surface, self.color, self.rect)
+            pygame.draw.rect(surface, self.color, self.rect)  # Default color for other buttons
 
         font = pygame.font.Font(None, 36)
         text = font.render(self.text, True, (255, 255, 255))
@@ -47,7 +50,7 @@ def generate(questions):
     for idx, option in enumerate(questions.options):
         is_correct = option == question.answer
         button_rect = pygame.Rect(10, 375 + idx * 50, WIDTH - 20, 40)
-        button = Button(f"{option}", button_rect, (0, 128, 255), option, correct=is_correct)
+        button = Button(f"{option.strip()}", button_rect, (0, 128, 255), option, correct=is_correct)
         buttons.append(button)
 
     while True:
@@ -61,8 +64,14 @@ def generate(questions):
 
         # Display question
         answer = questions.answer
-        question_rendered = font.render(questions.question, True, (255, 255, 255))
-        screen.blit(question_rendered, (x, y))
+        question_text = questions.question.strip()
+        max_line_length = WIDTH/12
+        split_question = split_text(question_text, max_line_length)
+        lines = split_question.split("\n")
+        for i, line in enumerate(lines):
+            line_rendered = font.render(line, True, (255, 255, 255))
+            screen.blit(line_rendered, (x, y + i * 30))  # Adjust the vertical position as needed
+
 
         # Draw buttons on the screen
         for button in buttons:
@@ -80,11 +89,15 @@ def generate(questions):
         yield (b'--frame\r\n'
                b'Content-Type: image/png\r\n\r\n' + img_byte_array.getvalue() + b'\r\n')
 
+
+current_question_index = 0  # Define current_question_index as a global variable
+
 @app.route('/')
 def index():
     return render_template('game.html')
 
-current_question_index = 0  # Define current_question_index as a global variable
+
+
 
 
 @app.route('/video_feed')
@@ -93,16 +106,8 @@ def video_feed():
 
     if current_question_index < len(quiz):
         question_obj = quiz[current_question_index]
-        current_question_index += 1
     else:
-        question_obj = None
-
-    # If there is no current question, return an empty response
-    if question_obj is None:
-        return Response("", mimetype='multipart/x-mixed-replace; boundary=frame')
-
-    # Print for debugging purposes
-    print(f"Current question: {question_obj}")
+        question_obj = quiz[0]
 
     return Response(generate(question_obj), mimetype='multipart/x-mixed-replace; boundary=frame')
 
@@ -112,27 +117,36 @@ def video_feed():
 def handle_click():
     global buttons
     global current_question_index
-
+    global score
     data = request.form  # Access the data sent with the POST request
     x = float(data.get('x'))
     y = float(data.get('y'))
+
     reload_page = False  # Flag to indicate whether a reload is required
+    wrong_answer_clicked = False  # Flag to indicate whether a wrong answer was clicked
+
 
     # Check if the coordinates are within any button rectangle
     for button in buttons:
         if button.rect.collidepoint(x, y):
-            button_clicked = button.text
-            user_answer = button.answer  # Extract the answer from the button
-            show_feedback = True
-            button.correct = user_answer == answer  # Mark the button as correct or incorrect
-            print("Correct!" if button.correct else "Wrong!")
-        # If the answer is correct, go to the next question
+            button_clicked = button.text.strip()
+            user_answer = button.answer.strip()  # Extract the answer from the button
+            button.correct = user_answer == answer.strip()  # Mark the button as correct or incorrect
+            # If the answer is correct, go to the next question
             if button.correct:
                 current_question_index += 1
+                score += 1
+                print(score, len(quiz))
                 if current_question_index >= len(quiz):
                     # If no more questions, reset to the first question
+                    print(display_score(score,len(quiz)))
                     current_question_index = 0
-                    reload_page = True  # Set the flag to reload the page
+                    score = 0
+                reload_page = True  # Set the flag to reload the page
+                time.sleep(1)
+            elif ~button.correct:
+                button.clicked = True
+                score -= 1
 
     return jsonify({'status': 'success', 'reload_page': reload_page})
 
@@ -142,10 +156,12 @@ def run_flask():
     run_simple('localhost', 5000, app, use_reloader=False)
 
 if __name__ == "__main__":
+    global score
+    score = 0
+    with open("../database/output.txt", "r") as file:
+        quiz = []  # create an empty list to store questions
+        load_quiz(file, quiz)
 
-    file = open("../Database/output.txt")
-    quiz = []  # create an empty list to store questions
-    load_quiz(file, quiz)
     total_answers = len(quiz)
     generate(quiz)
     app.run(debug=True)

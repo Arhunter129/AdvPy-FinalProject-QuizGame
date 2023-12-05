@@ -24,13 +24,13 @@
 </head>
 <body>
 
-<h1>Quiz Game !!!</h1>
+<h1>Python Quiz Game!!!</h1>
 
 <div id="game-container">
     <canvas id="game-canvas" width="800" height="600"></canvas>
 </div>
 <img id="game_screen" src="{{ url_for('video_feed') }}" width="800" height="600">
-
+    
 <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
 <script>
     $(document).ready(function() {
@@ -48,9 +48,7 @@
                 url: "/handle_click",
                 data: { x: x, y: y },
                 success: function(data) {
-                    // Handle the response from the server
-                    console.log("Response from server:", data);
-
+                
                     // Reload the page if the server indicates a reload is required
                     if (data.reload_page) {
                         location.reload(true);
