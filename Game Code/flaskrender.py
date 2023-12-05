@@ -8,7 +8,7 @@ app = Flask(__name__)
 
 # Pygame initialization
 pygame.init()
-WIDTH, HEIGHT = 1280, 720
+WIDTH, HEIGHT = 800, 600
 screen = pygame.Surface((WIDTH, HEIGHT))
 
 # Declare buttons as a global variable
@@ -44,10 +44,12 @@ def generate():
 
     # Create buttons with different colors and stack them vertically
     buttons = [
-        Button(answer_text, pygame.Rect(50, 400 + i * 60, 400, 50), (255, 0, 0))  # Red
+        Button(answer_text, pygame.Rect(50, 300 + i * 60, 400, 50), (0, 0, 0))
         for i, (answer_text, _) in enumerate(answers)
     ]
 
+    
+    
     correct_answer = 'C'
     user_answer = None
     show_feedback = False
@@ -63,8 +65,9 @@ def generate():
                 if event.button == 1:  # Left mouse button
                     for button in buttons:
                         if button.rect.collidepoint(event.pos):
-                            user_answer = button.answer
-                            print(f'Button {button.answer} clicked!')
+                            user_answer = button.text.split(":")[0].strip()  # Get the answer text
+                            print(f'Button {user_answer} clicked!')
+                            show_feedback = True  # Update show_feedback when a button is clicked
 
         # Update Pygame window (e.g., drawing)
         screen.fill((90, 90, 90))  # White background
@@ -88,6 +91,10 @@ def generate():
             feedback_rect = feedback_rendered.get_rect(center=(WIDTH // 2, HEIGHT - 50))
             screen.blit(feedback_rendered, feedback_rect)
 
+            # Reset show_feedback after displaying feedback for a short duration
+            pygame.time.delay(2000)  # Delay in milliseconds (adjust as needed)
+            show_feedback = False
+
         # Convert Pygame surface to PNG image
         img_str = pygame.image.tostring(screen, 'RGB')
         img = Image.frombytes('RGB', (WIDTH, HEIGHT), img_str)
@@ -99,7 +106,6 @@ def generate():
         # Yield the byte stream
         yield (b'--frame\r\n'
                b'Content-Type: image/png\r\n\r\n' + img_byte_array.getvalue() + b'\r\n')
-
 @app.route('/')
 def index():
     return render_template('game.html')
