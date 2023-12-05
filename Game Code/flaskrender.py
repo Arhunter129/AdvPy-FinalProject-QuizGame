@@ -18,33 +18,36 @@ buttons = []
 
 # Modify the Button class to include an answer attribute
 class Button:
-    def __init__(self, text, rect, color, answer):
+    def __init__(self, text, rect, color, answer, correct):
         self.text = text
         self.rect = rect
         self.color = color
         self.answer = answer
+        self.correct = correct
 
     def draw(self, surface):
-        pygame.draw.rect(surface, self.color, self.rect)
+        if self.correct:
+            pygame.draw.rect(surface, (0, 255, 0), self.rect)  # Green for correct
+        else:
+            pygame.draw.rect(surface, self.color, self.rect)
+
         font = pygame.font.Font(None, 36)
         text = font.render(self.text, True, (255, 255, 255))
         text_rect = text.get_rect(center=self.rect.center)
         surface.blit(text, text_rect)
 
 def generate(questions):
-    print("Received questions:", questions)  # Add this line
     x, y = 10, 10  # Starting position
     font = pygame.font.Font(None, 36)
-
-    # Clear the global buttons list
     global buttons
+    global answer
     buttons.clear()
-
 
     # Create buttons for each option
     for idx, option in enumerate(questions.options):
+        is_correct = option == question.answer
         button_rect = pygame.Rect(10, 375 + idx * 50, WIDTH - 20, 40)
-        button = Button(f"{option}", button_rect, (0, 128, 255), idx)
+        button = Button(f"{option}", button_rect, (0, 128, 255), option, correct=is_correct)
         buttons.append(button)
 
     while True:
@@ -57,6 +60,7 @@ def generate(questions):
         screen.fill((90, 90, 90))  # Grey Background
 
         # Display question
+        answer = questions.answer
         question_rendered = font.render(questions.question, True, (255, 255, 255))
         screen.blit(question_rendered, (x, y))
 
@@ -107,25 +111,30 @@ def video_feed():
 @app.route('/handle_click', methods=['POST'])
 def handle_click():
     global buttons
+    global current_question_index
 
     data = request.form  # Access the data sent with the POST request
     x = float(data.get('x'))
     y = float(data.get('y'))
-    print(f'Received click at coordinates ({x}, {y})')
+    reload_page = False  # Flag to indicate whether a reload is required
 
     # Check if the coordinates are within any button rectangle
     for button in buttons:
         if button.rect.collidepoint(x, y):
             button_clicked = button.text
             user_answer = button.answer  # Extract the answer from the button
-            print(f'Button "{button_clicked}" clicked!')
-            show_feedback = False
-            print(user_answer, button.answer)
-            if user_answer == button.answer:
-                show_feedback = True
-                print("correct")
+            show_feedback = True
+            button.correct = user_answer == answer  # Mark the button as correct or incorrect
+            print("Correct!" if button.correct else "Wrong!")
+        # If the answer is correct, go to the next question
+            if button.correct:
+                current_question_index += 1
+                if current_question_index >= len(quiz):
+                    # If no more questions, reset to the first question
+                    current_question_index = 0
+                    reload_page = True  # Set the flag to reload the page
 
-    return jsonify({'status': 'success'})
+    return jsonify({'status': 'success', 'reload_page': reload_page})
 
 
 def run_flask():
@@ -138,11 +147,7 @@ if __name__ == "__main__":
     quiz = []  # create an empty list to store questions
     load_quiz(file, quiz)
     total_answers = len(quiz)
-    print(quiz[0].question,quiz[0].answer)
-    print(quiz[0].options[0])
-    print(quiz[0].options[1])
     generate(quiz)
-
     app.run(debug=True)
     flask_thread = threading.Thread(target=run_flask)
     flask_thread.start()

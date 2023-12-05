@@ -10,9 +10,7 @@
             -ms-user-select: none; /* Internet Explorer/Edge */
             -webkit-user-select: none; /* Chrome, Safari, Opera */
         }
-    </style>
-    
-    <style>
+        
         #game-container {
             position: relative;
         }
@@ -52,6 +50,11 @@
                 success: function(data) {
                     // Handle the response from the server
                     console.log("Response from server:", data);
+
+                    // Reload the page if the server indicates a reload is required
+                    if (data.reload_page) {
+                        location.reload(true);
+                    }
                 },
                 error: function(error) {
                     console.error("Error sending AJAX request:", error);
