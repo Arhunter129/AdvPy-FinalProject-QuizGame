@@ -1,8 +1,10 @@
-from flask import Flask, render_template, Response, jsonify, request
+from flask import Flask, render_template, Response, jsonify, request, g
 import pygame
 from PIL import Image
 import io
 import threading
+from AK.PyQuizGame_Logic import question, check_answer, display_score, load_quiz, load_options, print_question
+
 
 app = Flask(__name__)
 
@@ -11,44 +13,39 @@ pygame.init()
 WIDTH, HEIGHT = 800, 600
 screen = pygame.Surface((WIDTH, HEIGHT))
 
+# Declare buttons as a global variable
+buttons = []
+
+# Modify the Button class to include an answer attribute
 class Button:
-    def __init__(self, text, rect, color):
+    def __init__(self, text, rect, color, answer):
         self.text = text
         self.rect = rect
-        self.color = color  # Add a color attribute
+        self.color = color
+        self.answer = answer
 
     def draw(self, surface):
-        pygame.draw.rect(surface, self.color, self.rect)  # Use the color attribute
+        pygame.draw.rect(surface, self.color, self.rect)
         font = pygame.font.Font(None, 36)
         text = font.render(self.text, True, (255, 255, 255))
         text_rect = text.get_rect(center=self.rect.center)
         surface.blit(text, text_rect)
 
-def generate():
-    x, y = 10, HEIGHT // 2  # Starting position
+def generate(questions):
+    print("Received questions:", questions)  # Add this line
+    x, y = 10, 10  # Starting position
     font = pygame.font.Font(None, 36)
 
-    # Example text with word wrapping
-    question = "This is an example question, which has the correct answer of C."
-    texts = [
-        question,
-        "A: Is Not Correct!",
-        "B: Also Not Correct!",
-        "C: Is Correct!",
-        "D: Go back to C, it's Correct!"
-    ]
+    # Clear the global buttons list
+    global buttons
+    buttons.clear()
 
-    # Create buttons with different colors
-    button_a = Button("A", pygame.Rect(50, 500, 100, 50), (255, 0, 0))  # Red
-    button_b = Button("B", pygame.Rect(200, 500, 100, 50), (0, 255, 0))  # Green
-    button_c = Button("C", pygame.Rect(350, 500, 100, 50), (0, 0, 255))  # Blue
-    button_d = Button("D", pygame.Rect(500, 500, 100, 50), (255, 255, 0))  # Yellow
 
-    buttons = [button_a, button_b, button_c, button_d]
-
-    correct_answer = 'C'
-    user_answer = None
-    show_feedback = False
+    # Create buttons for each option
+    for idx, option in enumerate(questions.options):
+        button_rect = pygame.Rect(10, 375 + idx * 50, WIDTH - 20, 40)
+        button = Button(f"{option}", button_rect, (0, 128, 255), idx)
+        buttons.append(button)
 
     while True:
         # Handle Pygame events (e.g., quitting)
@@ -56,36 +53,16 @@ def generate():
             if event.type == pygame.QUIT:
                 pygame.quit()
 
-            # Handle button clicks
-            if event.type == pygame.MOUSEBUTTONDOWN and not show_feedback:
-                if event.button == 1:  # Left mouse button
-                    for button in buttons:
-                        if button.rect.collidepoint(event.pos):
-                            user_answer = button.text
-                            print(f'Button {button.text} clicked!')
-
         # Update Pygame window (e.g., drawing)
-        screen.fill((255, 255, 255))  # White background
+        screen.fill((90, 90, 90))  # Grey Background
 
-        for i, text in enumerate(texts):
-            rendered_text = font.render(text, True, (0, 0, 0))
-            if y + rendered_text.get_height() * (i + 1) <= HEIGHT:
-                screen.blit(rendered_text, (x, y + rendered_text.get_height() * i))
+        # Display question
+        question_rendered = font.render(questions.question, True, (255, 255, 255))
+        screen.blit(question_rendered, (x, y))
 
-        # Draw buttons
+        # Draw buttons on the screen
         for button in buttons:
             button.draw(screen)
-
-        # Display feedback
-        if show_feedback:
-            if user_answer == correct_answer:
-                feedback_text = "Correct! Well done."
-            else:
-                feedback_text = "Try again. Incorrect answer."
-
-            feedback_rendered = font.render(feedback_text, True, (255, 0, 0))
-            feedback_rect = feedback_rendered.get_rect(center=(WIDTH // 2, HEIGHT - 50))
-            screen.blit(feedback_rendered, feedback_rect)
 
         # Convert Pygame surface to PNG image
         img_str = pygame.image.tostring(screen, 'RGB')
@@ -98,37 +75,74 @@ def generate():
         # Yield the byte stream
         yield (b'--frame\r\n'
                b'Content-Type: image/png\r\n\r\n' + img_byte_array.getvalue() + b'\r\n')
-               
 
 @app.route('/')
 def index():
     return render_template('game.html')
 
+current_question_index = 0  # Define current_question_index as a global variable
+
+
 @app.route('/video_feed')
 def video_feed():
-    return Response(generate(), mimetype='multipart/x-mixed-replace; boundary=frame')
+    global current_question_index
+
+    if current_question_index < len(quiz):
+        question_obj = quiz[current_question_index]
+        current_question_index += 1
+    else:
+        question_obj = None
+
+    # If there is no current question, return an empty response
+    if question_obj is None:
+        return Response("", mimetype='multipart/x-mixed-replace; boundary=frame')
+
+    # Print for debugging purposes
+    print(f"Current question: {question_obj}")
+
+    return Response(generate(question_obj), mimetype='multipart/x-mixed-replace; boundary=frame')
+
 
 
 @app.route('/handle_click', methods=['POST'])
 def handle_click():
+    global buttons
+
     data = request.form  # Access the data sent with the POST request
     x = float(data.get('x'))
     y = float(data.get('y'))
     print(f'Received click at coordinates ({x}, {y})')
 
-    # Add your logic to handle the click here
+    # Check if the coordinates are within any button rectangle
+    for button in buttons:
+        if button.rect.collidepoint(x, y):
+            button_clicked = button.text
+            user_answer = button.answer  # Extract the answer from the button
+            print(f'Button "{button_clicked}" clicked!')
+            show_feedback = False
+            print(user_answer, "2 and 2")
+            if user_answer == question.answer:
+                show_feedback = True
+                print("correct")
 
     return jsonify({'status': 'success'})
 
-# ...
 
 def run_flask():
     from werkzeug.serving import run_simple
     run_simple('localhost', 5000, app, use_reloader=False)
 
-# ...
-
 if __name__ == "__main__":
+
+    file = open("./AK/input.txt")
+    quiz = []  # create an empty list to store questions
+    load_quiz(file, quiz)
+    total_answers = len(quiz)
+    print(quiz[0].question,quiz[0].answer)
+    print(quiz[0].options[0])
+    print(quiz[0].options[1])
+    generate(quiz)
+
     app.run(debug=True)
-    #flask_thread = threading.Thread(target=run_flask)
-    #flask_thread.start()
+    flask_thread = threading.Thread(target=run_flask)
+    flask_thread.start()
