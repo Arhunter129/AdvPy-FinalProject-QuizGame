@@ -1,4 +1,4 @@
-GAME = /Game\ Code/flaskserver.py
+GAME = gamecode/flaskrender.py
 MAIN = mongo_to_txt.py
 TESTMAIN = test_mongo_to_text.py
 PY = python3

@@ -8,15 +8,16 @@ import time
 
 app = Flask(__name__)
 
-# Pygame initialization
+# Initialization Game window
 pygame.init()
 WIDTH, HEIGHT = 800, 600
 screen = pygame.Surface((WIDTH, HEIGHT))
 
-# Declare buttons as a global variable
+# Global variables
 buttons = []
+current_question_index = 0
 
-# Modify the Button class to include an answer attribute
+# Stores button data
 class Button:
     def __init__(self, text, rect, color, answer, correct):
         self.text = text
@@ -28,17 +29,19 @@ class Button:
 
     def draw(self, surface):
         if self.clicked:
-            pygame.draw.rect(surface, (255, 0, 0), self.rect)  # Red for clicked (incorrect) buttons
+            pygame.draw.rect(surface, (255, 0, 0), self.rect)  # Sets incorrect buttons red
         elif self.correct:
-            pygame.draw.rect(surface, (0, 255, 0), self.rect)  # Green for correct buttons
+            pygame.draw.rect(surface, (0, 255, 0), self.rect)  # Sets correct buttons green
         else:
-            pygame.draw.rect(surface, self.color, self.rect)  # Default color for other buttons
+            pygame.draw.rect(surface, self.color, self.rect)  # Default color
 
         font = pygame.font.Font(None, 36)
         text = font.render(self.text, True, (255, 255, 255))
         text_rect = text.get_rect(center=self.rect.center)
         surface.blit(text, text_rect)
 
+
+# Generates a new frame and exports it to the flask server
 def generate(questions):
     x, y = 10, 10  # Starting position
     font = pygame.font.Font(None, 36)
@@ -46,7 +49,7 @@ def generate(questions):
     global answer
     buttons.clear()
 
-    # Create buttons for each option
+    # Creates four buttons based on quiz data
     for idx, option in enumerate(questions.options):
         is_correct = option == question.answer
         button_rect = pygame.Rect(10, 375 + idx * 50, WIDTH - 20, 40)
@@ -54,13 +57,14 @@ def generate(questions):
         buttons.append(button)
 
     while True:
+
         # Handle Pygame events (e.g., quitting)
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
 
-        # Update Pygame window (e.g., drawing)
-        screen.fill((90, 90, 90))  # Grey Background
+        #Sets background to grey
+        screen.fill((90, 90, 90))
 
         # Display question
         answer = questions.answer
@@ -70,18 +74,17 @@ def generate(questions):
         lines = split_question.split("\n")
         for i, line in enumerate(lines):
             line_rendered = font.render(line, True, (255, 255, 255))
-            screen.blit(line_rendered, (x, y + i * 30))  # Adjust the vertical position as needed
+            screen.blit(line_rendered, (x, y + i * 30))
 
-
-        # Draw buttons on the screen
+        # Display buttons
         for button in buttons:
             button.draw(screen)
 
-        # Convert Pygame surface to PNG image
+        # Convert to PNG image
         img_str = pygame.image.tostring(screen, 'RGB')
         img = Image.frombytes('RGB', (WIDTH, HEIGHT), img_str)
 
-        # Convert PIL image to byte stream
+        # Convert PIL to byte stream
         img_byte_array = io.BytesIO()
         img.save(img_byte_array, format='PNG')
 
@@ -90,14 +93,9 @@ def generate(questions):
                b'Content-Type: image/png\r\n\r\n' + img_byte_array.getvalue() + b'\r\n')
 
 
-current_question_index = 0  # Define current_question_index as a global variable
-
 @app.route('/')
 def index():
     return render_template('game.html')
-
-
-
 
 
 @app.route('/video_feed')
@@ -112,37 +110,33 @@ def video_feed():
     return Response(generate(question_obj), mimetype='multipart/x-mixed-replace; boundary=frame')
 
 
-
 @app.route('/handle_click', methods=['POST'])
 def handle_click():
     global buttons
     global current_question_index
     global score
-    data = request.form  # Access the data sent with the POST request
+    data = request.form
     x = float(data.get('x'))
     y = float(data.get('y'))
+    reload_page = False
+    wrong_answer_clicked = False
 
-    reload_page = False  # Flag to indicate whether a reload is required
-    wrong_answer_clicked = False  # Flag to indicate whether a wrong answer was clicked
 
-
-    # Check if the coordinates are within any button rectangle
+    # Check if (x,y) is within any button rectangle
     for button in buttons:
         if button.rect.collidepoint(x, y):
             button_clicked = button.text.strip()
-            user_answer = button.answer.strip()  # Extract the answer from the button
-            button.correct = user_answer == answer.strip()  # Mark the button as correct or incorrect
-            # If the answer is correct, go to the next question
+            user_answer = button.answer.strip()
+            button.correct = user_answer == answer.strip()
             if button.correct:
                 current_question_index += 1
                 score += 1
                 print(score, len(quiz))
                 if current_question_index >= len(quiz):
-                    # If no more questions, reset to the first question
                     print(display_score(score,len(quiz)))
                     current_question_index = 0
                     score = 0
-                reload_page = True  # Set the flag to reload the page
+                reload_page = True
                 time.sleep(1)
             elif ~button.correct:
                 button.clicked = True
@@ -155,11 +149,13 @@ def run_flask():
     from werkzeug.serving import run_simple
     run_simple('localhost', 5000, app, use_reloader=False)
 
+
 if __name__ == "__main__":
+    # TODO finish moving load quiz , score, and queastion calls to game logic
     global score
     score = 0
-    with open("../database/output.txt", "r") as file:
-        quiz = []  # create an empty list to store questions
+    with open("./database/output.txt", "r") as file:
+        quiz = []
         load_quiz(file, quiz)
 
     total_answers = len(quiz)
