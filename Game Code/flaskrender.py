@@ -120,8 +120,8 @@ def handle_click():
             user_answer = button.answer  # Extract the answer from the button
             print(f'Button "{button_clicked}" clicked!')
             show_feedback = False
-            print(user_answer, "2 and 2")
-            if user_answer == question.answer:
+            print(user_answer, button.answer)
+            if user_answer == button.answer:
                 show_feedback = True
                 print("correct")
 
@@ -134,7 +134,7 @@ def run_flask():
 
 if __name__ == "__main__":
 
-    file = open("./AK/input.txt")
+    file = open("../Database/output.txt")
     quiz = []  # create an empty list to store questions
     load_quiz(file, quiz)
     total_answers = len(quiz)
