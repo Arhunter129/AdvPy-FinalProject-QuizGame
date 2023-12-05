@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Quiz Game</title>
+    <title>Python Quiz</title>
     <style>
         #game_screen {
             user-select: none;
@@ -26,13 +26,12 @@
 </head>
 <body>
 
-<h1>Quiz Game !!!</h1>
+<h1>Python Quiz Game!!!</h1>
 
 <div id="game-container">
     <canvas id="game-canvas" width="800" height="600"></canvas>
 </div>
 <img id="game_screen" src="{{ url_for('video_feed') }}" width="800" height="600">
-
 <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
 <script>
     $(document).ready(function() {
