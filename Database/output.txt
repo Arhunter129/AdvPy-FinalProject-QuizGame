@@ -1,0 +1,69 @@
+When was Python first released?
+1989
+1991
+1995
+2000
+1991
+
+What is the correct way to create a function in Python?
+function myFunction():
+def myFunction():
+create myFunction():
+new function myFunction():
+def myFunction():
+
+Which of these is not a core data type in Python?
+Lists
+Dictionary
+Tuples
+Class
+Class
+
+How do you insert COMMENTS in Python code?
+/* This is a comment */
+// This is a comment
+# This is a comment
+-- This is a comment
+# This is a comment
+
+What will be the output of the following code snippet? 'print('Python trivia[::-1]')'
+atirvt nohtyP
+Python trivia
+aivirt nohtyP
+Error
+aivirt nohtyP
+
+Which of the following is used to define a block of code in Python language?
+Braces {}
+Parentheses ()
+Indentation
+The word 'block
+Indentation
+
+Which one of the following is the correct etension of the Python file?
+.pyt
+.pt
+.py
+.python
+.py
+
+What is the term used for checking whether a certain condition is true or false in Python?
+Iteration
+Decision-making
+Looping
+Sequencing
+Decision-making
+
+Which of the following is the correct operator for power (xy)?
+x^y
+x**y
+x^^y
+pow(x, y)
+x**y
+
+What keyword is used for creating a new class in Python?
+class
+struct
+object
+define
+class
