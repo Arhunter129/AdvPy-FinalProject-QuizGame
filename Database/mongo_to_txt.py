@@ -1,16 +1,16 @@
 from typing import Any, List, Iterator
-from pymongo import MongoClient  # type: ignore
-from pymongo.server_api import ServerApi  # type: ignore
-from pymongo.errors import ConnectionFailure  # type: ignore
-from pymongo.cursor import Cursor  # type: ignore
+from pymongo import MongoClient
+from pymongo.server_api import ServerApi
+from pymongo.errors import ConnectionFailure
+from pymongo.cursor import Cursor
 
 
 def get_mongodb_data(
         connection_string: str,
         path: str,
         db_name: str,
-        collection_name: str) -> Cursor:
-    client = MongoClient(
+        collection_name: str) -> Cursor:  # type: ignore
+    client = MongoClient(  # type: ignore
         connection_string,
         tls=True,
         tlsCertificateKeyFile=path,
