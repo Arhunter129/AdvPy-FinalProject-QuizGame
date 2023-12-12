@@ -5,6 +5,7 @@ import io
 import threading
 from AK.PyQuizGame_Logic import question, check_answer, display_score, load_quiz, load_options, print_question, split_text
 import time
+from typing import List
 
 app = Flask(__name__)
 
@@ -14,12 +15,12 @@ WIDTH, HEIGHT = 800, 600
 screen = pygame.Surface((WIDTH, HEIGHT))
 
 # Global variables
-buttons = []
+buttons = List[question]
 current_question_index = 0
-
 # Stores button data
 class Button:
     def __init__(self, text, rect, color, answer, correct):
+        print(type(text))
         self.text = text
         self.rect = rect
         self.color = color
