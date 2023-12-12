@@ -1,11 +1,11 @@
-from flask import Flask, render_template, Response, jsonify, request, g
+from flask import Flask, render_template, Response, jsonify, request
 import pygame
 from PIL import Image
 import io
 import threading
-from AK.PyQuizGame_Logic import question, check_answer, display_score, load_quiz, load_options, print_question, split_text
+from AK.PyQuizGame_Logic import question, display_score, load_quiz, split_text
 import time
-from typing import List
+from typing import List, Generator
 
 app = Flask(__name__)
 
@@ -15,12 +15,14 @@ WIDTH, HEIGHT = 800, 600
 screen = pygame.Surface((WIDTH, HEIGHT))
 
 # Global variables
-buttons = List[question]
+answer = ''
 current_question_index = 0
 # Stores button data
+
+
 class Button:
-    def __init__(self, text, rect, color, answer, correct):
-        print(type(text))
+    def __init__(self, text: str, rect: pygame.Rect,
+                 color: tuple[int, int, int], answer: str, correct: bool):
         self.text = text
         self.rect = rect
         self.color = color
@@ -28,11 +30,13 @@ class Button:
         self.correct = correct
         self.clicked = False
 
-    def draw(self, surface):
+    def draw(self, surface: pygame.Surface) -> None:
         if self.clicked:
-            pygame.draw.rect(surface, (255, 0, 0), self.rect)  # Sets incorrect buttons red
+            # Sets incorrect buttons red
+            pygame.draw.rect(surface, (255, 0, 0), self.rect)
         elif self.correct:
-            pygame.draw.rect(surface, (0, 255, 0), self.rect)  # Sets correct buttons green
+            # Sets correct buttons green
+            pygame.draw.rect(surface, (0, 255, 0), self.rect)
         else:
             pygame.draw.rect(surface, self.color, self.rect)  # Default color
 
@@ -42,19 +46,24 @@ class Button:
         surface.blit(text, text_rect)
 
 
+buttons: List[Button] = []
 # Generates a new frame and exports it to the flask server
-def generate(questions):
+
+
+def generate(questions) -> Generator[bytes, None, None]:  # type: ignore
+    global answer
     x, y = 10, 10  # Starting position
     font = pygame.font.Font(None, 36)
     global buttons
-    global answer
-    buttons.clear()
-
+    buttons = []
+    print(f'Type of questions: {type(questions)}')
+    print(f'Value of questions: {questions}')
     # Creates four buttons based on quiz data
     for idx, option in enumerate(questions.options):
         is_correct = option == question.answer
         button_rect = pygame.Rect(10, 375 + idx * 50, WIDTH - 20, 40)
-        button = Button(f"{option.strip()}", button_rect, (0, 128, 255), option, correct=is_correct)
+        button = Button(f"{option.strip()}", button_rect,
+                        (0, 128, 255), option, correct=is_correct)
         buttons.append(button)
 
     while True:
@@ -64,14 +73,14 @@ def generate(questions):
             if event.type == pygame.QUIT:
                 pygame.quit()
 
-        #Sets background to grey
+        # Sets background to grey
         screen.fill((90, 90, 90))
 
         # Display question
         answer = questions.answer
         question_text = questions.question.strip()
-        max_line_length = WIDTH/12
-        split_question = split_text(question_text, max_line_length)
+        max_line_length = WIDTH / 12
+        split_question = split_text(question_text, int(max_line_length))
         lines = split_question.split("\n")
         for i, line in enumerate(lines):
             line_rendered = font.render(line, True, (255, 255, 255))
@@ -91,16 +100,17 @@ def generate(questions):
 
         # Yield the byte stream
         yield (b'--frame\r\n'
-               b'Content-Type: image/png\r\n\r\n' + img_byte_array.getvalue() + b'\r\n')
+               b'Content-Type: image/png\r\n\r\n' +
+               img_byte_array.getvalue() + b'\r\n')
 
 
 @app.route('/')
-def index():
+def index() -> str:
     return render_template('game.html')
 
 
 @app.route('/video_feed')
-def video_feed():
+def video_feed() -> Response:
     global current_question_index
 
     if current_question_index < len(quiz):
@@ -108,25 +118,30 @@ def video_feed():
     else:
         question_obj = quiz[0]
 
-    return Response(generate(question_obj), mimetype='multipart/x-mixed-replace; boundary=frame')
+    return Response(
+        generate(question_obj),
+        mimetype='multipart/x-mixed-replace; boundary=frame')
 
 
 @app.route('/handle_click', methods=['POST'])
-def handle_click():
+def handle_click() -> Response:
     global buttons
     global current_question_index
     global score
     data = request.form
-    x = float(data.get('x'))
-    y = float(data.get('y'))
-    reload_page = False
-    wrong_answer_clicked = False
+    x_str = data.get('x')
+    y_str = data.get('y')
 
+    if x_str is not None and y_str is not None:
+        x = float(x_str)
+        y = float(y_str)
+    else:
+        pass
+    reload_page = False
 
     # Check if (x,y) is within any button rectangle
     for button in buttons:
         if button.rect.collidepoint(x, y):
-            button_clicked = button.text.strip()
             user_answer = button.answer.strip()
             button.correct = user_answer == answer.strip()
             if button.correct:
@@ -134,7 +149,7 @@ def handle_click():
                 score += 1
                 print(score, len(quiz))
                 if current_question_index >= len(quiz):
-                    print(display_score(score,len(quiz)))
+                    display_score(score, len(quiz))
                     current_question_index = 0
                     score = 0
                 reload_page = True
@@ -146,7 +161,7 @@ def handle_click():
     return jsonify({'status': 'success', 'reload_page': reload_page})
 
 
-def run_flask():
+def run_flask() -> None:
     from werkzeug.serving import run_simple
     run_simple('localhost', 5000, app, use_reloader=False)
 
@@ -156,7 +171,7 @@ if __name__ == "__main__":
     global score
     score = 0
     with open("./database/output.txt", "r") as file:
-        quiz = []
+        quiz: List[question] = []
         load_quiz(file, quiz)
 
     total_answers = len(quiz)
